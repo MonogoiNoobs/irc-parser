@@ -1,0 +1,5 @@
+#!/bin/sh
+
+git -C parser-tests config --local core.sparsecheckout true
+echo "/tests/" >.git/modules/parser-tests/info/sparse-checkout
+git -C parser-tests read-tree -mu HEAD
