@@ -21,17 +21,11 @@ import { Numerics } from "./Numerics.js";
 export class IRCParser {
 	static Verbs = Verbs;
 	static Numerics = Numerics;
-
 	static #hostRegExp = /^(?:localhost|(?:[12]\d{2}|[1-9]\d|[1-9])(?:\.(?:[12]\d{2}|[1-9]\d|\d)){3}|(?:(?:[^_-].*[^_-]|.)(?:\.[^_-].*[^_-]|\.[^_-])+))$/iu;
 
 	/**
 	 * @typedef {{verb: keyof typeof Verbs | typeof Numerics.RPL[keyof typeof Numerics.RPL] | typeof Numerics.ERR[keyof typeof Numerics.ERR], params?: string[], source?: {nick: string, user?: string, host?: string, toString: () => string}, tags?: {string: string}}} IRCObject
 	 */
-
-	/** @type {IRCObject} */
-	unti = {
-		verb: "22222"
-	};
 
 	/**
 	 * @param {string} arg
