@@ -4,8 +4,8 @@ awful js irc msg parser for my personal use
 
 ## list
 
-* standalone
 * passed ircv3 tests
+* verbose constants
 
 ## example
 
@@ -14,7 +14,7 @@ useful for twitch chat
 ```js
 import { IRCParser } from "./IRCParser.js";
 
-const timefmt = new Intl.DateTimeFormat('ja-JP', { timeStyle: "short" });
+const timefmt = new Intl.DateTimeFormat("ja-JP", { timeStyle: "short" });
 
 const twitch = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
 twitch.addEventListener("open", event => {
