@@ -17,6 +17,7 @@ import { IRCParser } from "./IRCParser.js";
 const timefmt = new Intl.DateTimeFormat("ja-JP", { timeStyle: "short" });
 
 const twitch = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
+
 twitch.addEventListener("open", event => {
 	event.target.send(IRCParser.stringify({
 		verb: IRCParser.Verbs.CAP,

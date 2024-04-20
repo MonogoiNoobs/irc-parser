@@ -8,15 +8,37 @@ import { Verbs } from "./Verbs.js";
 import { Numerics } from "./Numerics.js";
 
 /**
- * This gives you statics, so just use directly like `JSON`:
- * * `IRCParser.parse(str)`
- * * `IRCParser.stringify(obj)`
- * * `IRCParser.mask(maskStr).test(targetSourceStr)`.
+ * # IRCParser
  *
- * You can use some useful constants:
- * * `IRCParser.Verbs`
- * * `IRCParser.Numerics.RPL`
- * * `IRCParser.Numerics.ERR`
+ * ## Functions
+ *
+ * ### `IRCParser.parse(str)`
+ *
+ * Like `JSON.parse(str)`.
+ *
+ * Note a valid IRC message *must* end with `\r\n`.
+ *
+ * ### `IRCParser.stringify(obj)`
+ *
+ * Like `JSON.stringify(obj)`.
+ *
+ * ### `IRCParser.mask(maskStr).test(targetSourceStr)`
+ *
+ * (todo)
+ *
+ * ## Constants
+ *
+ * ### `IRCParser.Verbs`
+ *
+ * IRC verbs.
+ *
+ * ### `IRCParser.Numerics.RPL`
+ *
+ * IRC non-error-number strings.
+ *
+ * ### `IRCParser.Numerics.ERR`
+ *
+ * IRC error-number strings.
  */
 export class IRCParser {
 	static Verbs = Verbs;
@@ -32,12 +54,14 @@ export class IRCParser {
 	 */
 	static #escapeIRCTagComponent(arg) {
 		return Array.from(arg).flatMap(v => {
-			if (v === "\\") return ["\\", "\\"];
-			if (v === " ") return ["\\", "s"];
-			if (v === ";") return ["\\", ":"];
-			if (v === "\r") return ["\\", "r"];
-			if (v === "\n") return ["\\", "n"];
-			return v;
+			switch (v) {
+				case "\\": return ["\\", "\\"];
+				case " ": return ["\\", "s"];
+				case ";": return ["\\", ":"];
+				case "\r": return ["\\", "r"];
+				case "\n": return ["\\", "n"];
+				default: return v;
+			}
 		}).join("")
 	}
 
@@ -45,20 +69,31 @@ export class IRCParser {
 	 * @param {string} arg
 	 */
 	static #unescapeIRCTagComponent(arg) {
-		const array = Array.from(arg).map(v => [v]);
-		for (const [i, v] of array.entries()) {
-			if (v[0] === "\\") {
-				v[0] =
-					i + 1 === array.length ? [] :
-						array[i + 1][0] === ":" ? ";" :
-							array[i + 1][0] === "s" ? " " :
-								array[i + 1][0] === "n" ? "\n" :
-									array[i + 1][0] === "r" ? "\r" :
-										array[i + 1][0];
-				array[i + 1] = [];
+		const array = Array
+			.from(arg)
+			.map(v => [v]);
+
+		const unescapeComponent = (i, arr) => {
+			if (i + 1 === arr.length) return [];
+
+			switch (arr[i + 1][0]) {
+				case ":": return ";";
+				case "s": return " ";
+				case "n": return "\n";
+				case "r": return "\r";
+				default: return arr[i + 1][0];
 			}
 		}
-		return array.flat().join("");
+
+		for (const [i, v] of array.entries()) {
+			if (v[0] !== "\\") continue;
+			v[0] = unescapeComponent(i, array);
+			array[i + 1] = [];
+		}
+
+		return array
+			.flat()
+			.join("");
 	}
 
 	/**
@@ -93,12 +128,12 @@ export class IRCParser {
 			, nick = arg;
 
 		if (!(nick.includes("!") || nick.includes("@"))) {
-			let onlynick = { nick };
-			Object.defineProperty(onlynick, "toString", {
-				value() { return nick },
+			const onlyNick = { nick };
+			Object.defineProperty(onlyNick, "toString", {
+				value: () => nick,
 				enumerable: false
 			});
-			return onlynick;
+			return onlyNick;
 		}
 
 		[nick, result] = this.#popDatumAfterDelimiterTo("host", nick, result, "@");
@@ -113,7 +148,7 @@ export class IRCParser {
 		};
 
 		Object.defineProperty(result, "toString", {
-			value() { return arg; },
+			value: () => arg,
 			enumerable: false
 		});
 
@@ -125,11 +160,11 @@ export class IRCParser {
 	 * @param {string} arg IRC message
 	 * @returns {IRCObject}
 	 * @example
-	 * // The message MUST be ended with CR+LF.
+	 * // The message *must* end with CR+LF.
 	 * const data = IRCParser.parse(":john@example.com PRIVMSG #general :hi guys\r\n");
 	 * if (data.verb === IRCParser.Verbs.PRIVMSG)
 	 *   console.log(`<${data.source.nick}>: ${data.params.at(-1)}`);
-	 *   //"<john>: hi guys"
+	 *   //=> "<john>: hi guys"
 	 */
 	static parse(arg) {
 		if (!arg.trim()) return {};
@@ -137,7 +172,7 @@ export class IRCParser {
 		if (!arg.endsWith("\r\n"))
 			throw new Error("Invalid syntax");
 
-		arg = arg.replace(/\r\n$/, "");
+		arg = arg.replace(/\r\n$/u, "");
 
 		const result = {
 			verb: "",
@@ -148,7 +183,7 @@ export class IRCParser {
 		for (
 			let splitted = arg.split(" ")
 			, v = splitted.shift()
-			, gotVerb = false;
+			, didGetVerb = false;
 			v !== void 0;
 			v = splitted.shift()
 		) {
@@ -158,7 +193,7 @@ export class IRCParser {
 					break;
 
 				case ":":
-					if (gotVerb) {
+					if (didGetVerb) {
 						result.params.push([v, ...splitted].join(" ").slice(1));
 						break parsing;
 					}
@@ -167,12 +202,12 @@ export class IRCParser {
 
 				default:
 					if (!v) break;
-					if (gotVerb) {
+					if (didGetVerb) {
 						result.params.push(v);
 						break;
 					}
 					result.verb = v;
-					gotVerb = true;
+					didGetVerb = true;
 					break;
 			}
 		}
@@ -244,9 +279,7 @@ export class IRCParser {
 				.join(" ");
 		}
 
-		result += "\r\n";
-
-		return result;
+		return result + "\r\n";
 	}
 
 	/**
