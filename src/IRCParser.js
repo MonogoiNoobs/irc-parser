@@ -1,11 +1,14 @@
 /**
  * IRCParser
  * @author MonogoiNoobs
- * @license 0BSD
+ * @license SPDX-License-Identifier: MIT
  */
 
 import { Verbs } from "./Verbs.js";
+export { Verbs };
+
 import { Numerics } from "./Numerics.js";
+export { Numerics };
 
 /**
  * # IRCParser
@@ -16,7 +19,7 @@ import { Numerics } from "./Numerics.js";
  *
  * Like `JSON.parse(str)`.
  *
- * Note a valid IRC message *must* end with `\r\n`.
+ * Note a valid IRC message *shall* end with `"\r\n"`.
  *
  * ### `IRCParser.stringify(obj)`
  *
@@ -28,25 +31,23 @@ import { Numerics } from "./Numerics.js";
  *
  * ## Constants
  *
- * ### `IRCParser.Verbs`
+ * ### `Verbs`
  *
  * IRC verbs.
  *
- * ### `IRCParser.Numerics.RPL`
+ * ### `Numerics.RPL`
  *
  * IRC non-error-number strings.
  *
- * ### `IRCParser.Numerics.ERR`
+ * ### `Numerics.ERR`
  *
  * IRC error-number strings.
  */
 export class IRCParser {
-	static Verbs = Verbs;
-	static Numerics = Numerics;
-	static #hostRegExp = /^(?:localhost|(?:[12]\d{2}|[1-9]\d|[1-9])(?:\.(?:[12]\d{2}|[1-9]\d|\d)){3}|(?:(?:[^_-].*[^_-]|.)(?:\.[^_-].*[^_-]|\.[^_-])+))$/iu;
+	static #hostRegExp = /^(?:localhost|(?:[12]\d{2}|[1-9]\d|[1-9])(?:\.(?:[12]\d{2}|[1-9]\d|\d)){3}|(?:(?:[^\s_-]\S*[^\s_-]|\S)(?:\.[^\s_-]?\S*[^\s_-]?)+))$/iu;
 
 	/**
-	 * @typedef {{verb: keyof typeof Verbs | typeof Numerics.RPL[keyof typeof Numerics.RPL] | typeof Numerics.ERR[keyof typeof Numerics.ERR], params?: string[], source?: {nick: string, user?: string, host?: string, toString: () => string}, tags?: {string: string}}} IRCObject
+	 * @typedef {{verb: string, params?: string[], source?: {nick: string, user?: string, host?: string, toString: () => string}, tags?: {string: string}}} IRCObject
 	 */
 
 	/**
@@ -60,7 +61,7 @@ export class IRCParser {
 				case ";": return ["\\", ":"];
 				case "\r": return ["\\", "r"];
 				case "\n": return ["\\", "n"];
-				default: return v;
+				default: return [v];
 			}
 		}).join("")
 	}
@@ -76,17 +77,17 @@ export class IRCParser {
 		const unescapeComponent = (i, arr) => {
 			if (i + 1 === arr.length) return [];
 
-			switch (arr[i + 1][0]) {
+			switch (arr.at(i + 1).at(0)) {
 				case ":": return ";";
 				case "s": return " ";
 				case "n": return "\n";
 				case "r": return "\r";
-				default: return arr[i + 1][0];
+				default: return arr.at(i + 1).at(0);
 			}
 		}
 
 		for (const [i, v] of array.entries()) {
-			if (v[0] !== "\\") continue;
+			if (v.at(0) !== "\\") continue;
 			v[0] = unescapeComponent(i, array);
 			array[i + 1] = [];
 		}
@@ -158,9 +159,9 @@ export class IRCParser {
 	/**
 	 * Parses an IRC message.
 	 * @param {string} arg IRC message
-	 * @returns {IRCObject}
+	 * @returns {IRCObject} IRC object
 	 * @example
-	 * // The message *must* end with CR+LF.
+	 * // The message SHALL end with CR+LF.
 	 * const data = IRCParser.parse(":john@example.com PRIVMSG #general :hi guys\r\n");
 	 * if (data.verb === IRCParser.Verbs.PRIVMSG)
 	 *   console.log(`<${data.source.nick}>: ${data.params.at(-1)}`);
@@ -181,20 +182,18 @@ export class IRCParser {
 
 		parsing:
 		for (
-			let splitted = arg.split(" ")
-			, v = splitted.shift()
-			, didGetVerb = false;
+			let split = arg.split(" "), v = split.shift(), hasGotVerb = false;
 			v !== void 0;
-			v = splitted.shift()
+			v = split.shift()
 		) {
-			switch (v[0]) {
+			switch (v.at(0)) {
 				case "@":
 					result.tags = this.#parseTags(v.slice(1));
 					break;
 
 				case ":":
-					if (didGetVerb) {
-						result.params.push([v, ...splitted].join(" ").slice(1));
+					if (hasGotVerb) {
+						result.params.push([v, ...split].join(" ").slice(1));
 						break parsing;
 					}
 					result.source = this.#parseSource(v.slice(1));
@@ -202,12 +201,12 @@ export class IRCParser {
 
 				default:
 					if (!v) break;
-					if (didGetVerb) {
+					if (hasGotVerb) {
 						result.params.push(v);
 						break;
 					}
 					result.verb = v;
-					didGetVerb = true;
+					hasGotVerb = true;
 					break;
 			}
 		}
@@ -243,7 +242,7 @@ export class IRCParser {
 			result += "@";
 			result += Object
 				.entries(obj.tags)
-				.map(v => [this.#escapeIRCTagComponent(v[0]), v[1] ? this.#escapeIRCTagComponent(v[1]) : []].flat())
+				.map(v => [this.#escapeIRCTagComponent(v.at(0)), v.at(1) ? this.#escapeIRCTagComponent(v.at(1)) : []].flat())
 				.map(v => v.join("="))
 				.join(";");
 			result += " ";
@@ -272,9 +271,9 @@ export class IRCParser {
 			result += obj
 				.params
 				.map(v => {
-					if (v.includes(" ") && v !== obj.params[obj.params.length - 1])
+					if (v.includes(" ") && v !== obj.params.at(obj.params.length - 1))
 						throw new Error("Invalid params");
-					return v === obj.params[obj.params.length - 1] ? `:${v}` : v;
+					return v === obj.params.at(obj.params.length - 1) ? `:${v}` : v;
 				})
 				.join(" ");
 		}
@@ -283,7 +282,7 @@ export class IRCParser {
 	}
 
 	/**
-	 * Cooks a Curry only holding the `test(IRCSourceString)` that compares with the mask.
+	 * Cooks a curry only holding the `test(IRCSourceString)` that compares with the mask.
 	 * @param {string} maskSource An IRC source mask.
 	 * @example
 	 * const mask = IRCParser.mask("gr?y!?@*");

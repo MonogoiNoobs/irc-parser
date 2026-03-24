@@ -1,4 +1,10 @@
-import { IRCParser } from "./IRCParser.js";
+/**
+ * IRCParser tests
+ * @author MonogoiNoobs
+ * @license SPDX-License-Identifier: MIT
+ */
+
+import { IRCParser } from "./src/IRCParser.js";
 import { parse } from "@std/yaml";
 import { assert, assertEquals, assertArrayIncludes } from "@std/assert";
 
@@ -37,7 +43,7 @@ Deno.test("Validating hostnames succeeds", async (t) => {
 						},
 						verb: "COMMAND",
 					});
-				} catch (_) {
+				} catch {
 					return false;
 				}
 				return true;

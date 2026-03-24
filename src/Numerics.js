@@ -1,3 +1,9 @@
+/**
+ * IRC Numerics constants.
+ * @author MonogoiNoobs
+ * @license SPDX-License-Identifier: MIT
+ */
+
 export const Numerics = Object.freeze({
 	RPL: {
 		WELCOME: "001",

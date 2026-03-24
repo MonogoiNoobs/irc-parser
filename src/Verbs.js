@@ -1,3 +1,9 @@
+/**
+ * IRC Verbs constants.
+ * @author MonogoiNoobs
+ * @license SPDX-License-Identifier: MIT
+ */
+
 export const Verbs = Object.freeze({
 	CAP: "CAP",
 	AUTHENTICATE: "AUTHENTICATE",
